@@ -116,15 +116,15 @@ public class IplayDeployTask implements Runnable {
 			} catch (FileNotFoundException e1) {
 				LOGGER.error(e1.getMessage(), e1);
 			}
-			handleDeployFailure(log);
+			sendDeployResultEmail(iplayDeployConfigurationProperties.getProject() + " BUILD FAILURE", log);
 		}
 	}
 
-	private void handleDeployFailure(Path log) {
+	private void sendDeployResultEmail(String subject, Path log) {
 		try {
 			String content = new String(Files.readAllBytes(log));
 			for (String email : iplayDeployConfigurationProperties.getEmailAddresses()) {
-				mailService.sendMail(sender, email, iplayDeployConfigurationProperties.getProject() + " BUILD FAILURE",
+				mailService.sendMail(sender, email, subject,
 						content);
 			}
 		} catch (IOException e1) {

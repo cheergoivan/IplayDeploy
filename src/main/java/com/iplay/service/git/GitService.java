@@ -1,4 +1,4 @@
-package com.iplay.service;
+package com.iplay.service.git;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,10 +21,11 @@ import com.iplay.entity.Credential;
 
 @Service
 public class GitService {
+	
 	public void clone(String localRepository, String remoteRepository, Credential credential, Writer out)
 			throws IOException, InvalidRemoteException, TransportException, GitAPIException {
 		CloneCommand cloneCommand = Git.cloneRepository().setURI(remoteRepository);
-		out.write("Clone " + remoteRepository + System.getProperty("line.separator"));
+		out.write("Clone from " + remoteRepository + System.getProperty("line.separator"));
 		cloneCommand.setCredentialsProvider(
 				new UsernamePasswordCredentialsProvider(credential.getUsername(), credential.getPassword()));
 		cloneCommand.setProgressMonitor(new TextProgressMonitor(out));
@@ -36,7 +37,7 @@ public class GitService {
 
 	public void pull(File localRepository, Credential credential, Writer out) throws Exception {
 		Git git = Git.open(localRepository);
-		out.write("Fetch From " + getOriginRemoteURL(git) + System.getProperty("line.separator"));
+		out.write("Fetch from " + getOriginRemoteURL(git) + System.getProperty("line.separator"));
 		PullCommand pullCommand = git.pull();
 		pullCommand.setCredentialsProvider(
 				new UsernamePasswordCredentialsProvider(credential.getUsername(), credential.getPassword()));
@@ -44,7 +45,7 @@ public class GitService {
 		pullCommand.call();
 	}
 
-	private static String getOriginRemoteURL(Git git) {
+	private String getOriginRemoteURL(Git git) {
 		return git.getRepository().getConfig().getString("remote", "origin", "url");
 	}
 

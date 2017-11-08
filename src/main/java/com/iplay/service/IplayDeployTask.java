@@ -28,6 +28,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Service;
 
 import com.iplay.configuration.IplayDeployConfigurationProperties;
+import com.iplay.service.command.CommandService;
+import com.iplay.service.command.InputStreamToLinesConsumer;
+import com.iplay.service.git.GitService;
 
 @Service
 @EnableConfigurationProperties(IplayDeployConfigurationProperties.class)
@@ -36,11 +39,13 @@ public class IplayDeployTask implements Runnable {
 
 	private static final String BUILD_SUCCESS_TAG = "BUILD SUCCESS";
 
+	private static final String BUILD_FAILURE_TAG = "BUILD FAILURE";
+
 	@Autowired
 	private GitService gitService;
 
 	@Autowired
-	private CmdService cmdService;
+	private CommandService cmdService;
 
 	@Autowired
 	private MailService mailService;
@@ -84,31 +89,32 @@ public class IplayDeployTask implements Runnable {
 
 			// maven build
 			boolean[] buildSuccess = new boolean[] { false };
-			List<String> output = new LinkedList<>();
-			output.add(System.getProperty("line.separator"));
+			List<String> mavenBuildOutput = new LinkedList<>();
+			mavenBuildOutput.add(System.getProperty("line.separator"));
 			String projectWorkspace = iplayDeployConfigurationProperties.getWorkspace() + "/"
 					+ iplayDeployConfigurationProperties.getProject();
 			Map<String, String> environment = new HashMap<>();
 			environment.put("WORKSPACE", projectWorkspace);
-			cmdService.executeCmd(new File(projectWorkspace), environment, "mvn clean package", line -> {
-				//System.out.println("print: " + line);
-				output.add(line);
-				if (!buildSuccess[0] && line.contains(BUILD_SUCCESS_TAG))
-					buildSuccess[0] = true;
-			});
-			Files.write(log, output, StandardOpenOption.APPEND);
+			cmdService.executeCommand(new File(projectWorkspace), environment, "mvn clean package",
+					new InputStreamToLinesConsumer(line -> {
+						// System.out.println("print: " + line);
+						mavenBuildOutput.add(line);
+						if (!buildSuccess[0] && line.contains(BUILD_SUCCESS_TAG))
+							buildSuccess[0] = true;
+					}));
+			Files.write(log, mavenBuildOutput, StandardOpenOption.APPEND);
 			if (!buildSuccess[0])
 				throw new Exception("Maven Build Failure!");
 
 			// build success
-			List<String> output2 = new LinkedList<>();
-			output2.add(System.getProperty("line.separator"));
-			cmdService.executeCmd(new File(projectWorkspace), environment,
-					iplayDeployConfigurationProperties.getPostStep(), line -> {
+			List<String> postStepOutput = new LinkedList<>();
+			postStepOutput.add(System.getProperty("line.separator"));
+			cmdService.executeCommand(new File(projectWorkspace), environment,
+					iplayDeployConfigurationProperties.getPostStep(), new InputStreamToLinesConsumer(line -> {
 						System.out.println("print: " + line);
-						output2.add(line);
-					});
-			Files.write(log, output2, StandardOpenOption.APPEND);
+						postStepOutput.add(line);
+					}));
+			Files.write(log, postStepOutput, StandardOpenOption.APPEND);
 		} catch (Exception e) {
 			LOGGER.error(e.getMessage(), e);
 			try {
@@ -116,7 +122,7 @@ public class IplayDeployTask implements Runnable {
 			} catch (FileNotFoundException e1) {
 				LOGGER.error(e1.getMessage(), e1);
 			}
-			sendDeployResultEmail(iplayDeployConfigurationProperties.getProject() + " BUILD FAILURE", log);
+			sendDeployResultEmail(iplayDeployConfigurationProperties.getProject() + " " + BUILD_FAILURE_TAG, log);
 		}
 	}
 
@@ -124,8 +130,7 @@ public class IplayDeployTask implements Runnable {
 		try {
 			String content = new String(Files.readAllBytes(log));
 			for (String email : iplayDeployConfigurationProperties.getEmailAddresses()) {
-				mailService.sendMail(sender, email, subject,
-						content);
+				mailService.sendMail(sender, email, subject, content);
 			}
 		} catch (IOException e1) {
 			LOGGER.error(e1.getMessage(), e1);

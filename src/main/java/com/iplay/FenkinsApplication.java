@@ -4,9 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class IplayDeployApplication {
+public class FenkinsApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(IplayDeployApplication.class, args);
+		SpringApplication.run(FenkinsApplication.class, args);
 	}
 }

@@ -7,7 +7,7 @@ import com.iplay.entity.Credential;
 @ConfigurationProperties("iplay.deploy")
 public class IplayDeployConfigurationProperties {
 	
-	private String workspace = "/root/.IplayDeploy";
+	private String workspace = "/root/.fenkins";
 	
 	private String project = "FeastBooking";
 	
